@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>企業入口網 v7</title>
+
+<style>
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:"Microsoft JhengHei",sans-serif;
+}
+
+body{
+  background:#f3f5f9;
+  color:#1f2937;
+}
+
+.header{
+  background:linear-gradient(90deg,#dbeafe,#eff6ff);
+  padding:20px 30px;
+  border-bottom:1px solid #dbe3ee;
+}
+
+.header-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:20px;
+}
+
+.logo-wrap{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.logo{
+  font-size:42px;
+  color:#2563eb;
+  font-weight:bold;
+}
+
+.title{
+  font-size:28px;
+  font-weight:bold;
+}
+
+.sub{
+  color:#6b7280;
+  margin-top:4px;
+}
+
+.tools{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.tool-btn{
+  border:none;
+  padding:12px 18px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.edit-btn{
+  background:#2563eb;
+  color:white;
+}
+
+.category-btn{
+  background:#111827;
+  color:white;
+}
+
+.edit-btn.active{
+  background:#dc2626;
+}
+
+.search{
+  margin-top:20px;
+}
+
+.search input{
+  width:100%;
+  padding:16px;
+  border-radius:14px;
+  border:1px solid #d1d5db;
+}
+
+.content{
+  padding:24px;
+}
+
+.category-block{
+  background:white;
+  border-radius:24px;
+  padding:22px;
+  margin-bottom:24px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.05);
+}
+
+.category-header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:18px;
+}
+
+.category-icon{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:20px;
+}
+
+.category-title{
+  font-size:26px;
+  font-weight:bold;
+}
+
+.category-count{
+  color:#6b7280;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  gap:18px;
+}
+
+.card{
+  background:#fbfcfe;
+  border:1px solid #e5e7eb;
+  border-radius:18px;
+  padding:18px 14px;
+  text-align:center;
+  cursor:pointer;
+  transition:0.2s;
+  position:relative;
+}
+
+.card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 10px 20px rgba(0,0,0,0.08);
+}
+
+.favorite{
+  position:absolute;
+  top:12px;
+  right:12px;
+  font-size:22px;
+  cursor:pointer;
+}
+
+.icon{
+  width:62px;
+  height:62px;
+  border-radius:18px;
+  margin:0 auto 12px;
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:30px;
+}
+
+.name{
+  font-weight:bold;
+  line-height:1.5;
+  min-height:42px;
+}
+
+.actions{
+  margin-top:12px;
+  display:none;
+  gap:8px;
+}
+
+.actions.show{
+  display:flex;
+}
+
+.small{
+  flex:1;
+  border:none;
+  padding:8px;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:13px;
+  font-weight:bold;
+}
+
+.edit-small{
+  background:#e5e7eb;
+}
+
+.delete-small{
+  background:#fee2e2;
+  color:#b91c1c;
+}
+
+.add-card{
+  background:#eff6ff;
+}
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.45);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+}
+
+.modal-box{
+  width:420px;
+  background:white;
+  border-radius:24px;
+  padding:24px;
+}
+
+.modal-title{
+  font-size:24px;
+  font-weight:bold;
+  margin-bottom:18px;
+}
+
+.group{
+  margin-bottom:16px;
+}
+
+.group label{
+  display:block;
+  margin-bottom:8px;
+  font-weight:bold;
+}
+
+.group input,
+.group select{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:1px solid #d1d5db;
+}
+
+.modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:20px;
+}
+
+.cancel{
+  background:#e5e7eb;
+}
+
+.save{
+  background:#2563eb;
+  color:white;
+}
+
+.category-list{
+  margin-top:20px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.category-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px;
+  background:#f9fafb;
+  border-radius:12px;
+}
+
+@media(max-width:768px){
+
+  .content{
+    padding:14px;
+  }
+
+  .grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+}
+
+</style>
+</head>
+<body>
+
+<div class="header">
+
+  <div class="header-top">
+
+    <div class="logo-wrap">
+
+      <div class="logo">i</div>
+
+      <div>
+        <div class="title">企業入口網</div>
+        <div class="sub">Company Portal System</div>
+      </div>
+
+    </div>
+
+    <div class="tools">
+
+      <button class="tool-btn category-btn"
+              onclick="openCategoryModal()">
+        📂 分類管理
+      </button>
+
+      <button class="tool-btn edit-btn"
+              id="editBtn"
+              onclick="toggleEdit()">
+        ⚙ 開啟編輯
+      </button>
+
+    </div>
+
+  </div>
+
+  <div class="search">
+    <input type="text"
+           id="searchInput"
+           placeholder="搜尋系統名稱...">
+  </div>
+
+</div>
+
+<div class="content" id="content"></div>
+
+<!-- 系統 Modal -->
+
+<div class="modal" id="systemModal">
+
+  <div class="modal-box">
+
+    <div class="modal-title" id="systemTitle">
+      新增系統
+    </div>
+
+    <div class="group">
+      <label>系統名稱</label>
+      <input type="text" id="sysName">
+    </div>
+
+    <div class="group">
+      <label>系統網址</label>
+      <input type="text" id="sysUrl">
+    </div>
+
+    <div class="group">
+      <label>系統圖示</label>
+      <input type="text" id="sysIcon">
+    </div>
+
+    <div class="group">
+      <label>系統分類</label>
+      <select id="sysCategory"></select>
+    </div>
+
+    <div class="modal-actions">
+
+      <button class="tool-btn cancel"
+              onclick="closeSystemModal()">
+        取消
+      </button>
+
+      <button class="tool-btn save"
+              onclick="saveSystem()">
+        儲存
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- 分類 Modal -->
+
+<div class="modal" id="categoryModal">
+
+  <div class="modal-box">
+
+    <div class="modal-title">
+      分類管理
+    </div>
+
+    <div class="group">
+      <label>分類名稱</label>
+      <input type="text" id="catName">
+    </div>
+
+    <div class="group">
+      <label>分類圖示</label>
+      <input type="text" id="catIcon">
+    </div>
+
+    <div class="group">
+      <label>分類顏色</label>
+      <input type="color"
+             id="catColor"
+             value="#3b82f6">
+    </div>
+
+    <button class="tool-btn save"
+            style="width:100%;"
+            onclick="addCategory()">
+      + 新增分類
+    </button>
+
+    <div class="category-list"
+         id="categoryList">
+    </div>
+
+    <div class="modal-actions">
+
+      <button class="tool-btn cancel"
+              onclick="closeCategoryModal()">
+        關閉
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+let editMode = false;
+let editIndex = null;
+
+let categories = JSON.parse(localStorage.getItem('portal_categories_v7')) || [
+
+{
+  name:'行政管理',
+  icon:'📦',
+  color:'#3b82f6'
+},
+
+{
+  name:'公文系統',
+  icon:'📄',
+  color:'#22c55e'
+},
+
+{
+  name:'客服管理',
+  icon:'☎',
+  color:'#a855f7'
+},
+
+{
+  name:'資訊服務',
+  icon:'🌐',
+  color:'#2563eb'
+}
+
+];
+
+let systems = JSON.parse(localStorage.getItem('portal_systems_v7')) || [
+
+{
+  name:'文具請領系統',
+  icon:'📦',
+  category:'行政管理',
+  url:'#',
+  favorite:true
+},
+
+{
+  name:'訂便當系統',
+  icon:'🍱',
+  category:'行政管理',
+  url:'#',
+  favorite:true
+},
+
+{
+  name:'公文稽催系統',
+  icon:'📄',
+  category:'公文系統',
+  url:'#',
+  favorite:false
+},
+
+{
+  name:'客服紀錄系統',
+  icon:'☎',
+  category:'客服管理',
+  url:'#',
+  favorite:false
+}
+
+];
+
+function saveAll(){
+
+  localStorage.setItem(
+    'portal_categories_v7',
+    JSON.stringify(categories)
+  );
+
+  localStorage.setItem(
+    'portal_systems_v7',
+    JSON.stringify(systems)
+  );
+
+}
+
+function render(){
+
+  const content = document.getElementById('content');
+
+  const keyword =
+    document.getElementById('searchInput').value;
+
+  content.innerHTML = '';
+
+  // 常用系統
+
+  const favorites = systems.filter(item =>
+    item.favorite &&
+    item.name.includes(keyword)
+  );
+
+  if(favorites.length > 0){
+
+    const block = document.createElement('div');
+
+    block.className = 'category-block';
+
+    block.innerHTML = `
+
+      <div class="category-header">
+
+        <div class="category-icon"
+             style="background:#f59e0b">
+          ⭐
+        </div>
+
+        <div class="category-title">
+          常用系統
+        </div>
+
+        <div class="category-count">
+          (${favorites.length})
+        </div>
+
+      </div>
+
+      <div class="grid">
+
+        ${favorites.map(system => createCard(system)).join('')}
+
+      </div>
+
+    `;
+
+    content.appendChild(block);
+
+  }
+
+  // 一般分類
+
+  categories.forEach(category => {
+
+    const categorySystems = systems.filter(item =>
+
+      item.category === category.name &&
+
+      item.name.includes(keyword)
+
+    );
+
+    if(categorySystems.length === 0 && !editMode){
+      return;
+    }
+
+    const block = document.createElement('div');
+
+    block.className = 'category-block';
+
+    block.innerHTML = `
+
+      <div class="category-header">
+
+        <div class="category-icon"
+             style="background:${category.color}">
+          ${category.icon}
+        </div>
+
+        <div class="category-title">
+          ${category.name}
+        </div>
+
+        <div class="category-count">
+          (${categorySystems.length})
+        </div>
+
+      </div>
+
+      <div class="grid">
+
+        ${categorySystems.map(system => createCard(system, category.color)).join('')}
+
+        ${editMode ? `
+
+        <div class="card add-card"
+             onclick="openSystemModal('${category.name}')">
+
+          <div class="icon"
+               style="background:${category.color}">
+            +
+          </div>
+
+          <div class="name">
+            新增系統
+          </div>
+
+        </div>
+
+        ` : ''}
+
+      </div>
+
+    `;
+
+    content.appendChild(block);
+
+  });
+
+}
+
+function createCard(system, color='#3b82f6'){
+
+  return `
+
+    <div class="card"
+         onclick="window.open('${system.url}','_blank')">
+
+      <div class="favorite"
+           onclick="toggleFavorite(${systems.indexOf(system)},event)">
+
+        ${system.favorite ? '⭐' : '☆'}
+
+      </div>
+
+      <div class="icon"
+           style="background:${color}">
+
+        ${system.icon}
+
+      </div>
+
+      <div class="name">
+
+        ${system.name}
+
+      </div>
+
+      <div class="actions ${editMode ? 'show' : ''}">
+
+        <button class="small edit-small"
+        onclick="editSystem(${systems.indexOf(system)},event)">
+  編輯
+</button>
+
+<button class="small edit-small"
+        onclick="moveSystemUp(${systems.indexOf(system)},event)">
+  ↑
+</button>
+
+<button class="small edit-small"
+        onclick="moveSystemDown(${systems.indexOf(system)},event)">
+  ↓
+</button>
+
+<button class="small delete-small"
+        onclick="deleteSystem(${systems.indexOf(system)},event)">
+  刪除
+</button>
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+function toggleFavorite(index,event){
+
+  event.stopPropagation();
+
+  systems[index].favorite = !systems[index].favorite;
+
+  saveAll();
+
+  render();
+
+}
+
+function toggleEdit(){
+
+  editMode = !editMode;
+
+  const btn =
+    document.getElementById('editBtn');
+
+  btn.innerText = editMode
+    ? '❌ 關閉編輯'
+    : '⚙ 開啟編輯';
+
+  btn.classList.toggle('active');
+
+  render();
+
+}
+
+function openSystemModal(category='行政管理'){
+
+  document.getElementById('systemModal')
+  .style.display='flex';
+
+  const select =
+    document.getElementById('sysCategory');
+
+  select.innerHTML = categories.map(item => `
+    <option>${item.name}</option>
+  `).join('');
+
+  select.value = category;
+
+}
+
+function closeSystemModal(){
+
+  document.getElementById('systemModal')
+  .style.display='none';
+
+  document.getElementById('sysName').value='';
+  document.getElementById('sysUrl').value='';
+  document.getElementById('sysIcon').value='';
+
+  editIndex = null;
+
+}
+
+function saveSystem(){
+
+  const data = {
+
+    name:document.getElementById('sysName').value,
+    url:document.getElementById('sysUrl').value,
+    icon:document.getElementById('sysIcon').value || '🖥',
+    category:document.getElementById('sysCategory').value,
+    favorite:false
+
+  };
+
+  if(!data.name || !data.url){
+
+    alert('請輸入系統名稱與網址');
+
+    return;
+
+  }
+
+  if(editIndex !== null){
+
+    data.favorite =
+      systems[editIndex].favorite;
+
+    systems[editIndex] = data;
+
+  }else{
+
+    systems.push(data);
+
+  }
+
+  saveAll();
+
+  render();
+
+  closeSystemModal();
+
+}
+
+function editSystem(index,event){
+
+  event.stopPropagation();
+
+  editIndex = index;
+
+  const system = systems[index];
+
+  openSystemModal(system.category);
+
+  document.getElementById('systemTitle')
+  .innerText='編輯系統';
+
+  document.getElementById('sysName').value=
+    system.name;
+
+  document.getElementById('sysUrl').value=
+    system.url;
+
+  document.getElementById('sysIcon').value=
+    system.icon;
+
+  document.getElementById('sysCategory').value=
+    system.category;
+
+}
+
+function deleteSystem(index,event){
+
+  event.stopPropagation();
+
+  if(confirm('確定刪除系統？')){
+
+    systems.splice(index,1);
+
+    saveAll();
+
+    render();
+
+  }
+
+}
+
+function openCategoryModal(){
+
+  document.getElementById('categoryModal')
+  .style.display='flex';
+
+  renderCategoryList();
+
+}
+
+function closeCategoryModal(){
+
+  document.getElementById('categoryModal')
+  .style.display='none';
+
+}
+
+function renderCategoryList(){
+
+  const list =
+    document.getElementById('categoryList');
+
+  list.innerHTML='';
+
+  categories.forEach((category,index)=>{
+
+    const item = document.createElement('div');
+
+    item.className='category-item';
+
+    item.innerHTML = `
+
+      <div>
+
+        <span style="
+          display:inline-flex;
+          width:30px;
+          height:30px;
+          border-radius:10px;
+          background:${category.color};
+          align-items:center;
+          justify-content:center;
+          color:white;
+          margin-right:8px;
+        ">
+
+          ${category.icon}
+
+        </span>
+
+        ${category.name}
+
+      </div>
+
+      <button class="small delete-small"
+              onclick="moveCategoryUp(${index})">↑</button>
+      <button class="small edit-small" onclick="moveCategoryDown(${index})">↓</button>
+      <button class="small delete-small" onclick="deleteCategory(${index})">
+
+        刪除
+
+      </button>
+
+    `;
+
+    list.appendChild(item);
+
+  });
+
+}
+
+function addCategory(){
+
+  const data = {
+
+    name:document.getElementById('catName').value,
+    icon:document.getElementById('catIcon').value || '📁',
+    color:document.getElementById('catColor').value
+
+  };
+
+  if(!data.name){
+
+    alert('請輸入分類名稱');
+
+    return;
+
+  }
+
+  categories.push(data);
+
+  saveAll();
+
+  renderCategoryList();
+
+  render();
+
+  document.getElementById('catName').value='';
+  document.getElementById('catIcon').value='';
+
+}
+
+
+function moveCategoryUp(index){
+ if(index===0)return;
+ [categories[index-1],categories[index]]=[categories[index],categories[index-1]];
+ saveAll(); renderCategoryList(); render();
+}
+
+function moveCategoryDown(index){
+ if(index>=categories.length-1)return;
+ [categories[index+1],categories[index]]=[categories[index],categories[index+1]];
+ saveAll(); renderCategoryList(); render();
+}
+
+function moveSystemUp(index,event){
+ event.stopPropagation();
+ if(index===0)return;
+ [systems[index-1],systems[index]]=[systems[index],systems[index-1]];
+ saveAll(); render();
+}
+
+function moveSystemDown(index,event){
+ event.stopPropagation();
+ if(index>=systems.length-1)return;
+ [systems[index+1],systems[index]]=[systems[index],systems[index+1]];
+ saveAll(); render();
+}
+
+
+function deleteCategory(index){
+
+  const categoryName =
+    categories[index].name;
+
+  const hasSystem = systems.some(
+    item => item.category === categoryName
+  );
+
+  if(hasSystem){
+
+    alert('此分類仍有系統，無法刪除');
+
+    return;
+
+  }
+
+  if(confirm('確定刪除此分類？')){
+
+    categories.splice(index,1);
+
+    saveAll();
+
+    renderCategoryList();
+
+    render();
+
+  }
+
+}
+
+document.getElementById('searchInput')
+.addEventListener('input',render);
+
+render();
+
+</script>
+
+</body>
+</html>
