@@ -124,6 +124,19 @@ body{
   font-size:20px;
 }
 
+.category-icon svg,
+.icon svg,
+.icon-choice svg,
+.category-info svg{
+  width:1.15em;
+  height:1.15em;
+  stroke:currentColor;
+  stroke-width:2;
+  fill:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
 .category-title{
   font-size:26px;
   font-weight:bold;
@@ -153,6 +166,21 @@ body{
 .card:hover{
   transform:translateY(-4px);
   box-shadow:0 10px 20px rgba(0,0,0,0.08);
+}
+
+.card.draggable{
+  cursor:grab;
+}
+
+.card.dragging,
+.category-item.dragging{
+  opacity:0.45;
+}
+
+.card.drop-target,
+.category-item.drop-target{
+  outline:2px dashed #2563eb;
+  outline-offset:4px;
 }
 
 .favorite{
@@ -220,15 +248,20 @@ body{
   background:rgba(0,0,0,0.45);
   display:none;
   justify-content:center;
-  align-items:center;
+  align-items:flex-start;
+  padding:24px;
+  overflow:hidden;
   z-index:999;
 }
 
 .modal-box{
   width:420px;
+  max-width:100%;
+  max-height:calc(100vh - 48px);
   background:white;
   border-radius:24px;
   padding:24px;
+  overflow-y:auto;
 }
 
 .modal-title{
@@ -255,11 +288,38 @@ body{
   border:1px solid #d1d5db;
 }
 
+.icon-picker{
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  gap:8px;
+  margin-top:8px;
+}
+
+.icon-choice{
+  border:1px solid #d1d5db;
+  background:white;
+  border-radius:10px;
+  min-height:36px;
+  cursor:pointer;
+  font-size:20px;
+  color:#1f2937;
+}
+
+.icon-choice:hover{
+  background:#eff6ff;
+  border-color:#2563eb;
+}
+
 .modal-actions{
   display:flex;
   justify-content:flex-end;
   gap:10px;
-  margin-top:20px;
+  position:sticky;
+  bottom:-24px;
+  margin:20px -24px -24px;
+  padding:16px 24px 24px;
+  background:white;
+  border-top:1px solid #eef2f7;
 }
 
 .cancel{
@@ -282,9 +342,37 @@ body{
   display:flex;
   justify-content:space-between;
   align-items:center;
+  gap:10px;
   padding:12px;
   background:#f9fafb;
   border-radius:12px;
+}
+
+.category-item[draggable="true"]{
+  cursor:grab;
+}
+
+.category-info{
+  flex:1;
+}
+
+.category-edit{
+  display:grid;
+  grid-template-columns:1fr 82px 52px;
+  gap:8px;
+  flex:1;
+}
+
+.category-edit input{
+  width:100%;
+  padding:8px;
+  border-radius:10px;
+  border:1px solid #d1d5db;
+}
+
+.category-actions{
+  display:flex;
+  gap:8px;
 }
 
 @media(max-width:768px){
@@ -293,8 +381,35 @@ body{
     padding:14px;
   }
 
+  .modal{
+    padding:12px;
+  }
+
+  .modal-box{
+    max-height:calc(100vh - 24px);
+    border-radius:18px;
+    padding:18px;
+  }
+
+  .modal-actions{
+    bottom:-18px;
+    margin:18px -18px -18px;
+    padding:14px 18px 18px;
+  }
+
   .grid{
     grid-template-columns:repeat(2,1fr);
+  }
+
+  .icon-picker{
+    grid-template-columns:repeat(6,1fr);
+  }
+
+  .category-item,
+  .category-edit{
+    align-items:stretch;
+    grid-template-columns:1fr;
+    flex-direction:column;
   }
 
 }
@@ -368,6 +483,7 @@ body{
     <div class="group">
       <label>系統圖示</label>
       <input type="text" id="sysIcon">
+      <div class="icon-picker" id="sysIconPicker"></div>
     </div>
 
     <div class="group">
@@ -411,6 +527,7 @@ body{
     <div class="group">
       <label>分類圖示</label>
       <input type="text" id="catIcon">
+      <div class="icon-picker" id="catIconPicker"></div>
     </div>
 
     <div class="group">
@@ -447,30 +564,88 @@ body{
 
 let editMode = false;
 let editIndex = null;
+let editingCategoryIndex = null;
+let draggedSystemIndex = null;
+let draggedCategoryIndex = null;
+
+const enterpriseIcons = {
+  desktop:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8"></path><path d="M12 16v4"></path></svg>',
+  folder:'<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>',
+  package:'<svg viewBox="0 0 24 24"><path d="M21 8 12 3 3 8l9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M12 13v8"></path></svg>',
+  document:'<svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path><path d="M9 13h6"></path><path d="M9 17h6"></path></svg>',
+  phone:'<svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.7.6 2.5a2 2 0 0 1-.5 2.1L8 9.5a16 16 0 0 0 6.5 6.5l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.6.5 2.5.6a2 2 0 0 1 1.7 2z"></path></svg>',
+  globe:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a14 14 0 0 1 0 18"></path><path d="M12 3a14 14 0 0 0 0 18"></path></svg>',
+  meal:'<svg viewBox="0 0 24 24"><path d="M4 3v8"></path><path d="M8 3v8"></path><path d="M4 7h4"></path><path d="M6 11v10"></path><path d="M17 3v18"></path><path d="M14 3h3a3 3 0 0 1 3 3v5h-3"></path></svg>',
+  chart:'<svg viewBox="0 0 24 24"><path d="M4 19h16"></path><path d="M7 16V9"></path><path d="M12 16V5"></path><path d="M17 16v-4"></path></svg>',
+  form:'<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="M8 8h8"></path><path d="M8 12h8"></path><path d="M8 16h5"></path></svg>',
+  building:'<svg viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v16"></path><path d="M17 9h1a2 2 0 0 1 2 2v10"></path><path d="M8 7h4"></path><path d="M8 11h4"></path><path d="M8 15h4"></path></svg>',
+  briefcase:'<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><path d="M3 12h18"></path></svg>',
+  calendar:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4"></path><path d="M8 3v4"></path><path d="M3 11h18"></path></svg>',
+  message:'<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H6l-3 3v-7a8 8 0 1 1 18-4z"></path><path d="M8 11h8"></path><path d="M8 15h5"></path></svg>',
+  search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>',
+  lock:'<svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>',
+  tools:'<svg viewBox="0 0 24 24"><path d="m14.7 6.3 3 3"></path><path d="M19 2l3 3-8 8-4 1 1-4 8-8z"></path><path d="M3 21l6-6"></path><path d="M4 14l6 6"></path></svg>',
+  pin:'<svg viewBox="0 0 24 24"><path d="M12 17v5"></path><path d="M8 3h8l-1 8 3 3v3H6v-3l3-3z"></path></svg>',
+  star:'<svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2 7.5 14 3 9.6l6.2-.9z"></path></svg>'
+};
+
+const legacyIconMap = {
+  '🖥':'desktop',
+  '📁':'folder',
+  '📦':'package',
+  '📄':'document',
+  '☎':'phone',
+  '🌐':'globe',
+  '🍱':'meal',
+  '📊':'chart',
+  '🧾':'form',
+  '🏢':'building',
+  '💼':'briefcase',
+  '🗂':'folder',
+  '📅':'calendar',
+  '💬':'message',
+  '🔎':'search',
+  '🔐':'lock',
+  '🧰':'tools',
+  '🛠':'tools',
+  '⚙':'tools',
+  '📌':'pin',
+  '⭐':'star'
+};
+
+const systemIconOptions = [
+  'desktop','package','document','phone','globe','meal','chart','form',
+  'folder','calendar','message','search','lock','tools','pin','star'
+];
+
+const categoryIconOptions = [
+  'folder','package','document','phone','globe','form','building','tools',
+  'briefcase','chart','calendar','lock','message','desktop','pin','star'
+];
 
 let categories = JSON.parse(localStorage.getItem('portal_categories_v7')) || [
 
 {
   name:'行政管理',
-  icon:'📦',
+  icon:'package',
   color:'#3b82f6'
 },
 
 {
   name:'公文系統',
-  icon:'📄',
+  icon:'document',
   color:'#22c55e'
 },
 
 {
   name:'客服管理',
-  icon:'☎',
+  icon:'phone',
   color:'#a855f7'
 },
 
 {
   name:'資訊服務',
-  icon:'🌐',
+  icon:'globe',
   color:'#2563eb'
 }
 
@@ -480,7 +655,7 @@ let systems = JSON.parse(localStorage.getItem('portal_systems_v7')) || [
 
 {
   name:'文具請領系統',
-  icon:'📦',
+  icon:'package',
   category:'行政管理',
   url:'#',
   favorite:true
@@ -488,7 +663,7 @@ let systems = JSON.parse(localStorage.getItem('portal_systems_v7')) || [
 
 {
   name:'訂便當系統',
-  icon:'🍱',
+  icon:'meal',
   category:'行政管理',
   url:'#',
   favorite:true
@@ -496,7 +671,7 @@ let systems = JSON.parse(localStorage.getItem('portal_systems_v7')) || [
 
 {
   name:'公文稽催系統',
-  icon:'📄',
+  icon:'document',
   category:'公文系統',
   url:'#',
   favorite:false
@@ -504,7 +679,7 @@ let systems = JSON.parse(localStorage.getItem('portal_systems_v7')) || [
 
 {
   name:'客服紀錄系統',
-  icon:'☎',
+  icon:'phone',
   category:'客服管理',
   url:'#',
   favorite:false
@@ -523,6 +698,68 @@ function saveAll(){
     'portal_systems_v7',
     JSON.stringify(systems)
   );
+
+}
+
+function normalizeIconValue(icon, fallback){
+
+  return legacyIconMap[icon] || icon || fallback;
+
+}
+
+function normalizeStoredIcons(){
+
+  categories = categories.map(category => ({
+    ...category,
+    icon:normalizeIconValue(category.icon,'folder')
+  }));
+
+  systems = systems.map(system => ({
+    ...system,
+    icon:normalizeIconValue(system.icon,'desktop')
+  }));
+
+}
+
+function iconMarkup(icon){
+
+  const normalizedIcon = normalizeIconValue(icon,'desktop');
+
+  return enterpriseIcons[normalizedIcon] || normalizedIcon;
+
+}
+
+normalizeStoredIcons();
+
+saveAll();
+
+function renderIconPicker(targetId, icons){
+
+  const picker = document.getElementById(`${targetId}Picker`);
+
+  picker.innerHTML = icons.map(icon => `
+    <button class="icon-choice"
+            type="button"
+            onclick="selectIcon('${targetId}','${icon}')">
+      ${iconMarkup(icon)}
+    </button>
+  `).join('');
+
+}
+
+function selectIcon(targetId, icon){
+
+  document.getElementById(targetId).value = icon;
+
+}
+
+function openSystemUrl(index){
+
+  if(editMode){
+    return;
+  }
+
+  window.open(systems[index].url,'_blank');
 
 }
 
@@ -554,7 +791,7 @@ function render(){
 
         <div class="category-icon"
              style="background:#f59e0b">
-          ⭐
+          ${iconMarkup('star')}
         </div>
 
         <div class="category-title">
@@ -605,7 +842,7 @@ function render(){
 
         <div class="category-icon"
              style="background:${category.color}">
-          ${category.icon}
+          ${iconMarkup(category.icon)}
         </div>
 
         <div class="category-title">
@@ -620,7 +857,7 @@ function render(){
 
       <div class="grid">
 
-        ${categorySystems.map(system => createCard(system, category.color)).join('')}
+        ${categorySystems.map(system => createCard(system, category.color, true)).join('')}
 
         ${editMode ? `
 
@@ -629,7 +866,7 @@ function render(){
 
           <div class="icon"
                style="background:${category.color}">
-            +
+            ${iconMarkup('desktop')}
           </div>
 
           <div class="name">
@@ -650,15 +887,27 @@ function render(){
 
 }
 
-function createCard(system, color='#3b82f6'){
+function createCard(system, color='#3b82f6', allowDrag=false){
+
+  const index = systems.indexOf(system);
+  const dragAttrs = editMode && allowDrag
+    ? `draggable="true"
+         ondragstart="startSystemDrag(${index},event)"
+         ondragover="allowDrop(event)"
+         ondragenter="markDropTarget(event)"
+         ondragleave="unmarkDropTarget(event)"
+         ondrop="dropSystem(${index},event)"
+         ondragend="clearDragState()"`
+    : '';
 
   return `
 
-    <div class="card"
-         onclick="window.open('${system.url}','_blank')">
+    <div class="card ${editMode && allowDrag ? 'draggable' : ''}"
+         ${dragAttrs}
+         onclick="openSystemUrl(${index})">
 
       <div class="favorite"
-           onclick="toggleFavorite(${systems.indexOf(system)},event)">
+           onclick="toggleFavorite(${index},event)">
 
         ${system.favorite ? '⭐' : '☆'}
 
@@ -667,7 +916,7 @@ function createCard(system, color='#3b82f6'){
       <div class="icon"
            style="background:${color}">
 
-        ${system.icon}
+        ${iconMarkup(system.icon)}
 
       </div>
 
@@ -680,22 +929,12 @@ function createCard(system, color='#3b82f6'){
       <div class="actions ${editMode ? 'show' : ''}">
 
         <button class="small edit-small"
-        onclick="editSystem(${systems.indexOf(system)},event)">
+        onclick="editSystem(${index},event)">
   編輯
 </button>
 
-<button class="small edit-small"
-        onclick="moveSystemUp(${systems.indexOf(system)},event)">
-  ↑
-</button>
-
-<button class="small edit-small"
-        onclick="moveSystemDown(${systems.indexOf(system)},event)">
-  ↓
-</button>
-
 <button class="small delete-small"
-        onclick="deleteSystem(${systems.indexOf(system)},event)">
+        onclick="deleteSystem(${index},event)">
   刪除
 </button>
 
@@ -741,6 +980,13 @@ function openSystemModal(category='行政管理'){
   document.getElementById('systemModal')
   .style.display='flex';
 
+  document.getElementById('systemTitle')
+  .innerText = editIndex === null
+    ? '新增系統'
+    : '編輯系統';
+
+  renderIconPicker('sysIcon', systemIconOptions);
+
   const select =
     document.getElementById('sysCategory');
 
@@ -761,6 +1007,9 @@ function closeSystemModal(){
   document.getElementById('sysUrl').value='';
   document.getElementById('sysIcon').value='';
 
+  document.getElementById('systemTitle')
+  .innerText='新增系統';
+
   editIndex = null;
 
 }
@@ -771,7 +1020,7 @@ function saveSystem(){
 
     name:document.getElementById('sysName').value,
     url:document.getElementById('sysUrl').value,
-    icon:document.getElementById('sysIcon').value || '🖥',
+    icon:document.getElementById('sysIcon').value || 'desktop',
     category:document.getElementById('sysCategory').value,
     favorite:false
 
@@ -854,6 +1103,8 @@ function openCategoryModal(){
   document.getElementById('categoryModal')
   .style.display='flex';
 
+  renderIconPicker('catIcon', categoryIconOptions);
+
   renderCategoryList();
 
 }
@@ -862,6 +1113,8 @@ function closeCategoryModal(){
 
   document.getElementById('categoryModal')
   .style.display='none';
+
+  editingCategoryIndex = null;
 
 }
 
@@ -877,10 +1130,52 @@ function renderCategoryList(){
     const item = document.createElement('div');
 
     item.className='category-item';
+    item.draggable = editingCategoryIndex === null;
+    item.ondragstart = event => startCategoryDrag(index,event);
+    item.ondragover = allowDrop;
+    item.ondragenter = markDropTarget;
+    item.ondragleave = unmarkDropTarget;
+    item.ondrop = event => dropCategory(index,event);
+    item.ondragend = clearDragState;
+
+    if(editingCategoryIndex === index){
+
+      item.innerHTML = `
+
+        <div class="category-edit">
+          <input type="text"
+                 id="editCatName${index}"
+                 value="${category.name}">
+          <input type="text"
+                 id="editCatIcon${index}"
+                 value="${category.icon}">
+          <input type="color"
+                 id="editCatColor${index}"
+                 value="${category.color}">
+        </div>
+
+        <div class="category-actions">
+          <button class="small save"
+                  onclick="saveCategoryEdit(${index})">
+            儲存
+          </button>
+          <button class="small cancel"
+                  onclick="cancelCategoryEdit()">
+            取消
+          </button>
+        </div>
+
+      `;
+
+      list.appendChild(item);
+
+      return;
+
+    }
 
     item.innerHTML = `
 
-      <div>
+      <div class="category-info">
 
         <span style="
           display:inline-flex;
@@ -894,7 +1189,7 @@ function renderCategoryList(){
           margin-right:8px;
         ">
 
-          ${category.icon}
+          ${iconMarkup(category.icon)}
 
         </span>
 
@@ -902,14 +1197,20 @@ function renderCategoryList(){
 
       </div>
 
-      <button class="small delete-small"
-              onclick="moveCategoryUp(${index})">↑</button>
-      <button class="small edit-small" onclick="moveCategoryDown(${index})">↓</button>
-      <button class="small delete-small" onclick="deleteCategory(${index})">
+      <div class="category-actions">
 
-        刪除
+        <button class="small edit-small"
+                onclick="editCategory(${index})">
+          編輯
+        </button>
 
-      </button>
+        <button class="small delete-small" onclick="deleteCategory(${index})">
+
+          刪除
+
+        </button>
+
+      </div>
 
     `;
 
@@ -924,7 +1225,7 @@ function addCategory(){
   const data = {
 
     name:document.getElementById('catName').value,
-    icon:document.getElementById('catIcon').value || '📁',
+    icon:document.getElementById('catIcon').value || 'folder',
     color:document.getElementById('catColor').value
 
   };
@@ -932,6 +1233,14 @@ function addCategory(){
   if(!data.name){
 
     alert('請輸入分類名稱');
+
+    return;
+
+  }
+
+  if(categories.some(item => item.name === data.name)){
+
+    alert('分類名稱已存在');
 
     return;
 
@@ -951,30 +1260,199 @@ function addCategory(){
 }
 
 
-function moveCategoryUp(index){
- if(index===0)return;
- [categories[index-1],categories[index]]=[categories[index],categories[index-1]];
- saveAll(); renderCategoryList(); render();
+function editCategory(index){
+
+  editingCategoryIndex = index;
+
+  renderCategoryList();
+
 }
 
-function moveCategoryDown(index){
- if(index>=categories.length-1)return;
- [categories[index+1],categories[index]]=[categories[index],categories[index+1]];
- saveAll(); renderCategoryList(); render();
+function cancelCategoryEdit(){
+
+  editingCategoryIndex = null;
+
+  renderCategoryList();
+
 }
 
-function moveSystemUp(index,event){
- event.stopPropagation();
- if(index===0)return;
- [systems[index-1],systems[index]]=[systems[index],systems[index-1]];
- saveAll(); render();
+function saveCategoryEdit(index){
+
+  const oldName = categories[index].name;
+  const newName = document.getElementById(`editCatName${index}`).value.trim();
+  const newIcon = document.getElementById(`editCatIcon${index}`).value || 'folder';
+  const newColor = document.getElementById(`editCatColor${index}`).value;
+
+  if(!newName){
+
+    alert('請輸入分類名稱');
+
+    return;
+
+  }
+
+  if(categories.some((item,itemIndex) =>
+    itemIndex !== index && item.name === newName
+  )){
+
+    alert('分類名稱已存在');
+
+    return;
+
+  }
+
+  categories[index] = {
+    name:newName,
+    icon:newIcon,
+    color:newColor
+  };
+
+  systems = systems.map(system =>
+    system.category === oldName
+      ? {...system, category:newName}
+      : system
+  );
+
+  editingCategoryIndex = null;
+
+  saveAll();
+
+  renderCategoryList();
+
+  render();
+
 }
 
-function moveSystemDown(index,event){
- event.stopPropagation();
- if(index>=systems.length-1)return;
- [systems[index+1],systems[index]]=[systems[index],systems[index+1]];
- saveAll(); render();
+function startSystemDrag(index,event){
+
+  draggedSystemIndex = index;
+
+  event.currentTarget.classList.add('dragging');
+  event.dataTransfer.effectAllowed = 'move';
+
+}
+
+function dropSystem(targetIndex,event){
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  if(draggedSystemIndex === null || draggedSystemIndex === targetIndex){
+    clearDragState();
+    return;
+  }
+
+  if(systems[draggedSystemIndex].category !== systems[targetIndex].category){
+    clearDragState();
+    return;
+  }
+
+  const insertAfter = isAfterDropPoint(event);
+  const [dragged] = systems.splice(draggedSystemIndex,1);
+  let insertIndex = targetIndex + (insertAfter ? 1 : 0);
+
+  if(draggedSystemIndex < insertIndex){
+    insertIndex--;
+  }
+
+  systems.splice(insertIndex,0,dragged);
+
+  saveAll();
+
+  render();
+
+  clearDragState();
+
+}
+
+function startCategoryDrag(index,event){
+
+  if(editingCategoryIndex !== null){
+    event.preventDefault();
+    return;
+  }
+
+  draggedCategoryIndex = index;
+
+  event.currentTarget.classList.add('dragging');
+  event.dataTransfer.effectAllowed = 'move';
+
+}
+
+function dropCategory(targetIndex,event){
+
+  event.preventDefault();
+
+  if(draggedCategoryIndex === null || draggedCategoryIndex === targetIndex){
+    clearDragState();
+    return;
+  }
+
+  const insertAfter = isAfterDropPoint(event);
+  const [dragged] = categories.splice(draggedCategoryIndex,1);
+  let insertIndex = targetIndex + (insertAfter ? 1 : 0);
+
+  if(draggedCategoryIndex < insertIndex){
+    insertIndex--;
+  }
+
+  categories.splice(insertIndex,0,dragged);
+
+  saveAll();
+
+  renderCategoryList();
+
+  render();
+
+  clearDragState();
+
+}
+
+function allowDrop(event){
+
+  if(draggedSystemIndex !== null || draggedCategoryIndex !== null){
+    event.preventDefault();
+  }
+
+}
+
+function isAfterDropPoint(event){
+
+  const rect = event.currentTarget.getBoundingClientRect();
+  const nearMiddleRow =
+    Math.abs(event.clientY - (rect.top + rect.height / 2)) <
+    rect.height * 0.35;
+
+  if(nearMiddleRow){
+    return event.clientX > rect.left + rect.width / 2;
+  }
+
+  return event.clientY > rect.top + rect.height / 2;
+
+}
+
+function markDropTarget(event){
+
+  if(draggedSystemIndex !== null || draggedCategoryIndex !== null){
+    event.currentTarget.classList.add('drop-target');
+  }
+
+}
+
+function unmarkDropTarget(event){
+
+  event.currentTarget.classList.remove('drop-target');
+
+}
+
+function clearDragState(){
+
+  draggedSystemIndex = null;
+  draggedCategoryIndex = null;
+
+  document.querySelectorAll('.dragging,.drop-target')
+  .forEach(item => item.classList.remove('dragging','drop-target'));
+
 }
 
 
